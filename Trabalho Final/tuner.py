@@ -94,7 +94,10 @@ def custom_fft(samples, sample_rate):
     result = fft.fft(samples)
     result = np.asarray(result)
     frequencies = np.fft.rfftfreq(len(samples), d=1 / sample_rate)
+
+    #ignora DC offset
     frequencies = frequencies[1:]
+    result = result[1:]
 
     # Plot
     plt.figure(figsize=(12, 5))
