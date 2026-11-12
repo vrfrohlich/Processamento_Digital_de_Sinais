@@ -1,7 +1,7 @@
 import math
 
 N = 8192
-FS = 48000
+FS = 44100
 Q = 15
 
 SCALE = 1 << Q
@@ -25,7 +25,7 @@ def generate_factors():
     ]
 
     # Generate header file
-    with open("fft_tables.h", "w") as f:
+    with open("C/fft_tables.h", "w") as f:
         f.write("#ifndef FFT_TABLES_H\n")
         f.write("#define FFT_TABLES_H\n\n")
         f.write("#include <stdint.h>\n\n")
@@ -34,16 +34,6 @@ def generate_factors():
         f.write(f"#define FFT_TABLE_FS {FS}u\n")
         f.write(f"#define FFT_TABLE_Q {Q}u\n")
         f.write(f"#define FFT_FREQ_SCALE {FREQ_SCALE}u\n\n")
-
-        f.write("extern const int32_t cos_factors[FFT_TABLE_N / 2];\n")
-        f.write("extern const int32_t sin_factors[FFT_TABLE_N / 2];\n")
-        f.write("extern const uint32_t frequency_bins[FFT_TABLE_N / 2 + 1];\n\n")
-
-        f.write("#endif /* FFT_TABLES_H */\n")
-
-    # Generate source file
-    with open("fft_tables.c", "w") as f:
-        f.write('#include "fft_tables.h"\n\n')
 
         f.write("const int32_t cos_factors[FFT_TABLE_N / 2] = {\n")
         f.write(",\n".join(
@@ -65,6 +55,8 @@ def generate_factors():
             for i in range(0, len(frequency_bins), 8)
         ))
         f.write("\n};\n")
+
+        f.write("#endif /* FFT_TABLES_H */\n")
 
 
 generate_factors()

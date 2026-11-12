@@ -147,6 +147,28 @@ def chunk_samples(samples: np.ndarray,
 
     return samples.reshape(-1, chunk_size)
 
+import numpy as np
+
+def dump_to_header(data1, data2, filename="dump.h", array_name="buffer"):
+    data1 = np.asarray(data1, dtype=np.uint16).flatten()
+    data2 = np.asarray(data2, dtype=np.uint16).flatten()
+
+    assert data1.size == 8192, "Each array must contain exactly 8192 elements"
+    assert data2.size == 8192, "Each array must contain exactly 8192 elements"
+
+    with open(filename, "w") as f:
+        f.write("#ifndef DUMP_H\n#define DUMP_H\n\n")
+        f.write("#include <stdint.h>\n\n")
+        f.write(f"uint16_t {array_name}[2][8192] = {{\n")
+
+        for data in (data1, data2):
+            f.write("    {\n")
+            np.savetxt(f, data.reshape(-1, 8), fmt="%d",
+                       delimiter=", ", newline=",\n")
+            f.write("    },\n")
+
+        f.write("};\n\n#endif // DUMP_H\n")
+
 filename = "./samples/piano-c_C_major.wav"
 
 with wave.open(filename, "rb") as wav:
@@ -160,6 +182,8 @@ chunks = chunk_samples(samples)
 perform_fft(chunks[1],sample_rate)
 
 custom_fft(chunks[1],sample_rate)
+
+dump_to_header(chunks[1],chunks[2])
 #perform_chunked_fft(chunks,sample_rate)
 
 #perform_fft(chunks[5],sample_rate)
