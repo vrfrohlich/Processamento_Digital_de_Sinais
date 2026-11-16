@@ -3,6 +3,7 @@ import wave
 import numpy as np
 import matplotlib.pyplot as plt
 import fft
+import math
 
 
 def wav_to_samples(filename: str | Path) -> np.ndarray:
@@ -169,6 +170,81 @@ def dump_to_header(data1, data2, filename="dump.h", array_name="buffer"):
 
         f.write("};\n\n#endif // DUMP_H\n")
 
+def parse_display(frequency: float, line1: list, line2: list) -> bool:
+
+    # Notes of octave 4 (A4 = 440 Hz)
+    NOTES = (
+        "C", "C#", "D", "D#", "E", "F",
+        "F#", "G", "G#", "A", "A#", "B"
+    )
+
+    FREQS = (
+        261.63, 277.18, 293.66, 311.13, 329.63, 349.23,
+        369.99, 392.00, 415.30, 440.00, 466.16, 493.88
+    )
+
+    HALF_SEMITONE = 1.0293022366
+    TOLERANCE_CENTS = 5.0
+
+    # Precomputed note boundaries
+    NOTE_UPPER = tuple(f * HALF_SEMITONE for f in FREQS)
+
+    # Precomputed octave boundaries
+    OCTAVE_LOWER = NOTE_UPPER[0]
+    OCTAVE_UPPER = NOTE_UPPER[11]
+
+    # 1. Normalize frequency to octave 4
+    f = frequency
+    octave = 4
+
+    while f < OCTAVE_LOWER:
+        f *= 2.0
+        octave -= 1
+
+    while f > OCTAVE_UPPER:
+        f *= 0.5
+        octave += 1
+
+    # 2. Find corresponding note
+    note = 0
+
+    while note < 11 and f > NOTE_UPPER[note]:
+        note += 1
+
+    # 3. Calculate deviation in cents
+    cents_float = 1200.0 * math.log2(f / FREQS[note])
+
+    # Position within the note's frequency range
+    pos = 0.5 + cents_float * 0.01
+
+    # Rounded deviation in cents
+    cents = math.floor(cents_float + 0.5)
+
+    # 4. Generate first LCD line
+    name = f"{NOTES[note]}{octave}"
+    tuned = abs(cents_float) <= TOLERANCE_CENTS
+
+    if tuned:
+        text = f"{name:<3.3} {frequency:4.1f}Hz  OK"
+    else:
+        text = f"{name:<3.3} {frequency:4.1f}Hz {cents:+3d}"
+
+    line1[0] = text[:16].ljust(16)
+
+    # 5. Generate second LCD line
+    line = list("b------|------# ")
+
+    if tuned:
+        column = 7
+    else:
+        column = 1 + int(pos * 12.0 + 0.5)
+
+    line[column] = 'O'
+
+    line2[0] = ''.join(line)
+
+    return True
+
 filename = "./samples/piano-c_C_major.wav"
 
 with wave.open(filename, "rb") as wav:
@@ -180,26 +256,19 @@ samples = wav_to_samples(filename)
 chunks = chunk_samples(samples)
 
 perform_fft(chunks[1],sample_rate)
-
 custom_fft(chunks[1],sample_rate)
 
-dump_to_header(chunks[1],chunks[2])
-#perform_chunked_fft(chunks,sample_rate)
+line1 = [""]
+line2 = [""]
+frequencies = [
+    446, 123.5, 57, 368, 307.92, 149.44, 294.21, 2346.4, 
+    504.67, 671.46, 621.7, 710.8, 805, 879.6, 930.04, 1003]
+for frequency in frequencies:
+    parse_display(frequency, line1, line2)
+    print(line1[0])
+    print(line2[0])
 
+#dump_to_header(chunks[1],chunks[2])
 #perform_fft(chunks[5],sample_rate)
-
-
-# Fs = 1000             # taxa de amostragem
-# T = 1                 # periodo amostrado
-# Ts = 1/Fs             # periodo de amostragem
-# t = np.arange(0,T,Ts) # vetor de tempo
-# x1_n = 3*np.cos(2*np.pi*10*t + 0)           # sinal 1
-# x2_n = 1*np.cos(2*np.pi*60*t + np.pi)       # sinal 2
-# x3_n = 0.8*np.cos(2*np.pi*113*t + np.pi/6)  # sinal 3
-# x_n = x1_n + x2_n + x3_n
-# n = len(x_n)                # numero de amostras
-# k = np.arange(n)            # vetor em k
-# frq = k/T                   # os dois lados do vetor de frequencia
-# perform_fft(x_n,Fs)
 
 input()

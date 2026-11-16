@@ -1,3 +1,11 @@
+/*
+ * fft.c
+ *
+ *  Created on: 15 de nov. de 2026
+ *      Author: felip
+ */
+
+
 #include <stdint.h>
 #include <stddef.h>
 
@@ -55,12 +63,12 @@ static uint32_t integer_sqrt(uint32_t x)
  * Radix-2 DIT FFT.
  * --------------------------------------------------------------- */
 bool fft(
-    const uint16_t *input,
+    const uint32_t *input,
     uint16_t *magnitude,
     uint32_t N,
     int16_t *re,
     int16_t *im,
-    int32_t *peak_mag_index
+    uint32_t *peak_mag_index
 )
 {
     uint32_t i, j, k;
@@ -208,7 +216,7 @@ bool fft(
         magnitude[k] = (uint16_t)integer_sqrt(sum);
         if(magnitude[k] > peak_mag && k != 0){
             peak_mag = magnitude[k];
-            peak_mag_index = k;
+            *peak_mag_index = k;
         }
 
         /*

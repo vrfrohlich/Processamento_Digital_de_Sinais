@@ -27,6 +27,13 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#include <stdio.h>
+
+#include "display.h"
+#include "fft.h"
+#include "fft_tables.h"
+#include "ECUAL/LCD16X2/LCD16X2.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -36,6 +43,19 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
+#define NUM_SAMPLES FFT_TABLE_N
+#define SAMPLE_FREQUENCY FFT_TABLE_FS
+#define FREQ_SCALE FFT_FREQ_SCALE
+#define MAG_THRESHOLD 100
+
+#define ADC_HANDLE hadc1
+#define DMA_HANDLE hdma2
+#define TIM_HANDLE htim2
+
+#define LCD_HANDLE LCD16X2_1
+
+#define DISPLAY_BUFFER_SIZE 17
 
 /* USER CODE END PD */
 
@@ -47,6 +67,14 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+
+uint32_t samples[2][NUM_SAMPLES] = {0};
+uint8_t sampling_buffer_index = 0;
+bool pending_process = false;
+
+int16_t real_buffer[NUM_SAMPLES] = {0};
+int16_t imaginary_buffer[NUM_SAMPLES] = {0};
+uint16_t mag_buffer[NUM_SAMPLES/2 + 1] = {0};
 
 /* USER CODE END PV */
 
@@ -96,6 +124,16 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
+  LCD16X2_Init(LCD_HANDLE);
+  LCD16X2_Clear(LCD_HANDLE);
+  LCD16X2_Set_Cursor(LCD_HANDLE, 1, 1);
+  LCD16X2_Write_String(LCD_HANDLE, "  Teste");
+  LCD16X2_Set_Cursor(LCD_HANDLE, 2, 1);
+  LCD16X2_Write_String(LCD_HANDLE, "do display LCD");
+
+  HAL_ADC_Start_DMA(&ADC_HANDLE, &samples[0][0], NUM_SAMPLES);
+	HAL_TIM_Base_Start(&TIM_HANDLE);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -103,6 +141,42 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+
+  	if(pending_process){
+//			uint8_t buffer[25];
+//			snprintf(buffer,sizeof(buffer),"Iniciando: %d\n\r", HAL_GetTick());
+//			HAL_UART_Transmit(&huart2,buffer , sizeof(buffer), 1000);
+
+  		pending_process = false;
+  		const uint8_t processing_buffer_index = sampling_buffer_index ^ 0b1;
+			uint32_t peak_mag_index;
+			if(!fft(&samples[processing_buffer_index][0],
+					mag_buffer,
+					NUM_SAMPLES,
+					real_buffer,
+					imaginary_buffer,
+					&peak_mag_index
+			)){
+				uint8_t buffer[25] = "Erro ao realizar FFT\0";
+				HAL_UART_Transmit(&huart2,buffer , sizeof(buffer), 1000);
+				break;
+			}
+
+			char lines[2][DISPLAY_BUFFER_SIZE] = {'\0'};
+
+			if(mag_buffer[peak_mag_index] > MAG_THRESHOLD){
+				const uint32_t frequency = frequency_bins[peak_mag_index];
+				parse_display(frequency, &lines[0][0], &lines[1][0]);
+			}
+
+		  LCD16X2_Set_Cursor(LCD_HANDLE, 1, 1);
+		  LCD16X2_Write_String(LCD_HANDLE, &lines[0][0]);
+		  LCD16X2_Set_Cursor(LCD_HANDLE, 2, 1);
+		  LCD16X2_Write_String(LCD_HANDLE, &lines[1][0]);
+
+//			snprintf(buffer,sizeof(buffer),"Terminando: %d\n\r", HAL_GetTick());
+//			HAL_UART_Transmit(&huart2,buffer , sizeof(buffer), 1000);
+  	}
 
     /* USER CODE BEGIN 3 */
   }
@@ -157,6 +231,16 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc){
+	if(hadc == &ADC_HANDLE){
+    sampling_buffer_index ^= 0b1;
+    pending_process = true;
+    HAL_ADC_Start_DMA(&ADC_HANDLE,&samples[sampling_buffer_index][0],NUM_SAMPLES);
+	}
+}
+
+
 
 /* USER CODE END 4 */
 
