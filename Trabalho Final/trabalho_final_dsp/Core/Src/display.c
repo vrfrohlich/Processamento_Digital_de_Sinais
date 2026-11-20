@@ -72,18 +72,18 @@ void parse_display(float freq, char *line1, char *line2)
 
     unsigned int decimals = (unsigned)(freq * 10.0f + 0.5f) % 100000u;
     if (tuned) {
-        snprintf(line1, 17, "%-3.3s %4u.%uHz  OK", name, decimals / 10, decimals % 10);
+        snprintf(line1, 27, "%-3.3s     %4u.%uHz      OK\r\n", name, decimals / 10, decimals % 10);
     } else {
-        snprintf(line1, 17, "%-3.3s %4u.%uHz %+3d", name, decimals / 10, decimals % 10, cents);
+        snprintf(line1, 27, "%-3.3s     %4u.%uHz     %+3d\r\n", name, decimals / 10, decimals % 10, cents);
     }
 
     // ponteiro 'O' entre b (baixo) e # (alto), centro na coluna 7
     // coluna = 1 + pos * 12  ->  pos 0 = col 1, 0.5 = col 7, 1 = col 13 */
-    snprintf(line2, 17, "b------|------# ");
+    snprintf(line2, 27, "b----------|----------# \r\n");
 
-		int column = 7;
+		int column = 11;
     if (!tuned){
-    		column = 1 + (int)(pos * 12.0f + 0.5f);
+    		column = 1 + (int)(pos * 20.0f + 0.5f);
     }
     line2[column] = 'O';
 }

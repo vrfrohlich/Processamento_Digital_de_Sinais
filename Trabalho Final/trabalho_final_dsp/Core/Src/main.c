@@ -33,7 +33,6 @@
 #include "display.h"
 #include "fft.h"
 #include "fft_tables.h"
-#include "ECUAL/LCD16X2/LCD16X2.h"
 
 /* USER CODE END Includes */
 
@@ -54,9 +53,7 @@
 #define DMA_HANDLE hdma2
 #define TIM_HANDLE htim2
 
-#define LCD_HANDLE LCD16X2_1
-
-#define DISPLAY_BUFFER_SIZE 17
+#define DISPLAY_BUFFER_SIZE 27
 
 /* USER CODE END PD */
 
@@ -125,16 +122,6 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  LCD16X2_Init(LCD_HANDLE);
-  LCD16X2_Clear(LCD_HANDLE);
-  HAL_Delay(1000);
-  LCD16X2_Set_Cursor(LCD_HANDLE, 1, 1);
-  LCD16X2_Write_String(LCD_HANDLE, "  Teste");
-  HAL_Delay(1000);
-  LCD16X2_Set_Cursor(LCD_HANDLE, 2, 1);
-  LCD16X2_Write_String(LCD_HANDLE, "do display LCD");
-  HAL_Delay(1000);
-
   HAL_ADC_Start_DMA(&ADC_HANDLE, (uint32_t*)&samples[0][0], NUM_SAMPLES);
 	HAL_TIM_Base_Start(&TIM_HANDLE);
 
@@ -147,9 +134,6 @@ int main(void)
     /* USER CODE END WHILE */
 
   	if(pending_process){
-//			uint8_t buffer[25];
-//			snprintf(buffer,sizeof(buffer),"Iniciando: %d\n\r", HAL_GetTick());
-//			HAL_UART_Transmit(&huart2,buffer , sizeof(buffer), 1000);
 
   		pending_process = false;
   		const uint8_t processing_buffer_index = sampling_buffer_index ^ 0b1;
@@ -167,20 +151,17 @@ int main(void)
 			}
 
 			char lines[2][DISPLAY_BUFFER_SIZE] = {'\0'};
-			strncpy(&lines[0][0],"Sem sinal\0",DISPLAY_BUFFER_SIZE);
 
-			if(mag_buffer[peak_mag_index] > MAG_THRESHOLD){
+			if(mag_buffer[peak_mag_index] > MAG_THRESHOLD) {
 				const uint32_t frequency = frequency_bins[peak_mag_index];
-				parse_display(frequency, &lines[0][0], &lines[1][0]);
+				parse_display((float)frequency/1000., &lines[0][0], &lines[1][0]);
+				HAL_UART_Transmit(&huart2, &lines[0][0] , DISPLAY_BUFFER_SIZE, 1000);
+				HAL_UART_Transmit(&huart2, &lines[1][0] , DISPLAY_BUFFER_SIZE, 1000);
+			} else {
+				strncpy(&lines[0][0],"Sem sinal\r\n\0",DISPLAY_BUFFER_SIZE);
+				HAL_UART_Transmit(&huart2, &lines[0][0] , DISPLAY_BUFFER_SIZE, 1000);
 			}
 
-		  LCD16X2_Set_Cursor(LCD_HANDLE, 1, 1);
-		  LCD16X2_Write_String(LCD_HANDLE, &lines[0][0]);
-		  LCD16X2_Set_Cursor(LCD_HANDLE, 2, 1);
-		  LCD16X2_Write_String(LCD_HANDLE, &lines[1][0]);
-
-//			snprintf(buffer,sizeof(buffer),"Terminando: %d\n\r", HAL_GetTick());
-//			HAL_UART_Transmit(&huart2,buffer , sizeof(buffer), 1000);
   	}
 
     /* USER CODE BEGIN 3 */
