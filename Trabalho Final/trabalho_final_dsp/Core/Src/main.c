@@ -28,6 +28,7 @@
 /* USER CODE BEGIN Includes */
 
 #include <stdio.h>
+#include <string.h>
 
 #include "display.h"
 #include "fft.h"
@@ -68,7 +69,7 @@
 
 /* USER CODE BEGIN PV */
 
-uint32_t samples[2][NUM_SAMPLES] = {0};
+uint16_t samples[2][NUM_SAMPLES] = {0};
 uint8_t sampling_buffer_index = 0;
 bool pending_process = false;
 
@@ -126,12 +127,15 @@ int main(void)
 
   LCD16X2_Init(LCD_HANDLE);
   LCD16X2_Clear(LCD_HANDLE);
+  HAL_Delay(1000);
   LCD16X2_Set_Cursor(LCD_HANDLE, 1, 1);
   LCD16X2_Write_String(LCD_HANDLE, "  Teste");
+  HAL_Delay(1000);
   LCD16X2_Set_Cursor(LCD_HANDLE, 2, 1);
   LCD16X2_Write_String(LCD_HANDLE, "do display LCD");
+  HAL_Delay(1000);
 
-  HAL_ADC_Start_DMA(&ADC_HANDLE, &samples[0][0], NUM_SAMPLES);
+  HAL_ADC_Start_DMA(&ADC_HANDLE, (uint32_t*)&samples[0][0], NUM_SAMPLES);
 	HAL_TIM_Base_Start(&TIM_HANDLE);
 
   /* USER CODE END 2 */
@@ -163,6 +167,7 @@ int main(void)
 			}
 
 			char lines[2][DISPLAY_BUFFER_SIZE] = {'\0'};
+			strncpy(&lines[0][0],"Sem sinal\0",DISPLAY_BUFFER_SIZE);
 
 			if(mag_buffer[peak_mag_index] > MAG_THRESHOLD){
 				const uint32_t frequency = frequency_bins[peak_mag_index];
@@ -236,7 +241,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc){
 	if(hadc == &ADC_HANDLE){
     sampling_buffer_index ^= 0b1;
     pending_process = true;
-    HAL_ADC_Start_DMA(&ADC_HANDLE,&samples[sampling_buffer_index][0],NUM_SAMPLES);
+    HAL_ADC_Start_DMA(&ADC_HANDLE,(uint32_t*)&samples[sampling_buffer_index][0],NUM_SAMPLES);
 	}
 }
 

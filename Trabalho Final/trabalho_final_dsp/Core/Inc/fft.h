@@ -24,7 +24,7 @@
  *  true: Operation executed successfully
  */
 bool fft(
-    const uint32_t *input,
+    const uint16_t *input,
     uint16_t *magnitude,
     uint32_t N,
     int16_t *re,
